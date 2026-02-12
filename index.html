@@ -100,19 +100,19 @@
   </style>
 </head>
 <body>
-  <h1>月订单对比工具（支持 WPS / .et）</h1>
-  <p class="desc">上传官方月订单表和客户手工月订单表，自动比对重复订单号、官方漏单、客户多报，并可导出结果（支持 xlsx/xls/csv/et）。</p>
+  <h1>月订单对比工具（WPS 导出文件可用）</h1>
+  <p class="desc">上传官方月订单表和客户手工月订单表，自动比对重复订单号、官方漏单、客户多报，并可导出结果。</p>
 
   <div class="card">
     <div class="grid">
       <div>
-        <label for="officialFile">官方导出月订单表（xlsx/xls/csv/et）</label>
-        <input id="officialFile" type="file" accept=".xlsx,.xls,.csv,.et" />
+        <label for="officialFile">官方导出月订单表（xlsx/xls/csv）</label>
+        <input id="officialFile" type="file" accept=".xlsx,.xls,.csv" />
         <div class="help" id="officialInfo"></div>
       </div>
       <div>
-        <label for="clientFile">客户手工月订单表（xlsx/xls/csv/et）</label>
-        <input id="clientFile" type="file" accept=".xlsx,.xls,.csv,.et" />
+        <label for="clientFile">客户手工月订单表（xlsx/xls/csv）</label>
+        <input id="clientFile" type="file" accept=".xlsx,.xls,.csv" />
         <div class="help" id="clientInfo"></div>
       </div>
     </div>
@@ -220,7 +220,7 @@
         setStatus("文件读取成功，可开始对比。", false);
       } catch (err) {
         console.error(err);
-        setStatus(`读取失败：${file.name}，请确认是 WPS 导出的 xlsx/xls/csv/et。`, true);
+        setStatus(`读取失败：${file.name}，请确认是 WPS 导出的 xlsx/xls/csv。`, true);
       }
     };
 
