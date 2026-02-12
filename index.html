@@ -3,199 +3,344 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Arbitrum Sepolia Counter DApp</title>
-</head>
-<body>
+  <title>月订单对比工具</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 560px;
-      margin: 40px auto;
-      padding: 0 16px;
-      line-height: 1.6;
-      color: #1f2933;
+    :root {
+      color-scheme: light;
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --border: #e5e7eb;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --bg: #f8fafc;
     }
-    h1 { margin-bottom: 8px; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px 32px;
+      color: var(--text);
+      background: var(--bg);
+    }
+    h1 { margin: 0 0 8px; }
+    .desc { color: var(--muted); margin-bottom: 14px; }
     .card {
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
       padding: 16px;
-      margin-top: 12px;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+      margin-bottom: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+    }
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #374151;
+      font-weight: 600;
+    }
+    .help { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    input[type="file"], select {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 8px;
+      box-sizing: border-box;
+      background: #fff;
     }
     button {
-      padding: 10px 16px;
-      margin-right: 8px;
-      margin-bottom: 8px;
-      border-radius: 8px;
-      border: 1px solid #d1d5db;
-      background: #2563eb;
+      margin-top: 10px;
+      border: 1px solid var(--blue);
+      background: var(--blue);
       color: #fff;
+      border-radius: 8px;
+      padding: 10px 14px;
       cursor: pointer;
-      transition: all 0.15s ease;
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    button:hover { background: var(--blue-dark); }
+    .stats {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      margin-top: 6px;
     }
-    button:hover:not(:disabled) { background: #1d4ed8; }
-    .status { font-size: 14px; color: #4b5563; }
-    .error { color: #b91c1c; font-size: 14px; }
-    .success { color: #047857; font-size: 14px; }
-    .row { margin: 6px 0; }
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      background: #fff;
+    }
+    .stat .num { font-size: 24px; font-weight: 700; color: #111827; }
+    .status { margin-top: 8px; font-size: 14px; }
+    .status.error { color: #b91c1c; }
+    .status.ok { color: #047857; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px;
+      text-align: left;
+      font-size: 14px;
+      vertical-align: top;
+    }
+    th { background: #f3f4f6; }
+    .table-wrap { overflow-x: auto; }
   </style>
-
-  <h1>Arbitrum Sepolia Counter DApp</h1>
-  <div class="status">状态：<span id="status">未连接</span></div>
-  <div class="status">账号：<span id="account">-</span></div>
-  <div class="status">网络：<span id="network">-</span></div>
+</head>
+<body>
+  <h1>月订单对比工具（WPS 导出文件可用）</h1>
+  <p class="desc">上传官方月订单表和客户手工月订单表，自动比对重复订单号、官方漏单、客户多报，并可导出结果。</p>
 
   <div class="card">
-    <div class="row">
-      <button id="connect">连接 OKX 钱包</button>
-      <button id="inc" disabled>增加 count</button>
-      <button id="set" disabled>设置 count = 10</button>
+    <div class="grid">
+      <div>
+        <label for="officialFile">官方导出月订单表（xlsx/xls/csv/et）</label>
+        <input id="officialFile" type="file" accept=".xlsx,.xls,.csv,.et" />
+        <div class="help" id="officialInfo"></div>
+      </div>
+      <div>
+        <label for="clientFile">客户手工月订单表（xlsx/xls/csv/et）</label>
+        <input id="clientFile" type="file" accept=".xlsx,.xls,.csv,.et" />
+        <div class="help" id="clientInfo"></div>
+      </div>
     </div>
-    <div class="row">当前 count: <span id="value">-</span></div>
-    <div class="row success" id="msg"></div>
-    <div class="row error" id="error"></div>
+
+    <div class="grid" style="margin-top: 12px;">
+      <div>
+        <label for="officialColumn">官方表订单号字段</label>
+        <select id="officialColumn"></select>
+      </div>
+      <div>
+        <label for="clientColumn">客户表订单号字段</label>
+        <select id="clientColumn"></select>
+      </div>
+    </div>
+
+    <button id="compareBtn">开始对比</button>
+    <button id="exportBtn" disabled>导出结果 CSV</button>
+    <div id="status" class="status"></div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.0/dist/ethers.min.js"></script>
-  <script>
-    const contractAddress = "0xb25EA940aCf9fe9d5097Aef885229944F8A06eA7";
-    const abi = [
-      "function count() view returns (uint256)",
-      "function increment()",
-      "function set(uint256 _v)"
-    ];
+  <div class="card">
+    <h3>对比汇总</h3>
+    <div class="stats">
+      <div class="stat"><div class="num" id="officialCount">0</div><div>官方订单号总数</div></div>
+      <div class="stat"><div class="num" id="clientCount">0</div><div>客户订单号总数</div></div>
+      <div class="stat"><div class="num" id="dupCount">0</div><div>两边重复订单号</div></div>
+      <div class="stat"><div class="num" id="missingInClient">0</div><div>官方有/客户漏掉</div></div>
+      <div class="stat"><div class="num" id="extraInClient">0</div><div>客户有/官方没有</div></div>
+    </div>
+  </div>
 
-    const targetChainIdHex = "0x66eed"; // Arbitrum Sepolia 421614
-    let provider, signer, contract, pollTimer;
+  <div class="card table-wrap">
+    <h3>明细表</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>类型</th>
+          <th>订单号</th>
+        </tr>
+      </thead>
+      <tbody id="resultBody">
+        <tr><td colspan="2">暂无结果</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    const state = {
+      officialRows: [],
+      clientRows: [],
+      resultRows: []
+    };
+
+    const orderFieldHints = ["订单号", "订单编号", "order_no", "order id", "orderid", "单号"];
 
     const $ = (id) => document.getElementById(id);
-    const setMsg = (text) => { $("msg").innerText = text || ""; };
-    const setError = (text) => { $("error").innerText = text || ""; };
-    const setStatus = (text) => { $("status").innerText = text; };
+    const setStatus = (msg, isError = false) => {
+      const node = $("status");
+      node.textContent = msg;
+      node.className = "status " + (isError ? "error" : "ok");
+    };
 
-    const getInjectedProvider = () =>
-      window.okxwallet?.ethereum || window.ethereum;
-
-    const ensureProvider = () => {
-      const injected = getInjectedProvider();
-      if (!injected) {
-        setError("未检测到 OKX/以太坊钱包，请先安装插件。");
+    const tryReadWorkbook = (input, options) => {
+      try {
+        return XLSX.read(input, options);
+      } catch {
         return null;
       }
-      return injected;
     };
 
-    const ensureNetwork = async (eth) => {
-      const current = await eth.request({ method: "eth_chainId" });
-      if (current === targetChainIdHex) return true;
-      try {
-        await eth.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: targetChainIdHex }]
-        });
-        return true;
-      } catch (err) {
-        setError("请切换到 Arbitrum Sepolia 网络后再试。");
-        return false;
+    const toObjectsFromSheet = (sheet) => {
+      if (!sheet) return [];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+      if (rows.length) return rows;
+
+      // 兼容“无表头”或表头不在首行的导出文件
+      const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+      const firstDataRow = matrix.find((row) => Array.isArray(row) && row.some((v) => String(v || "").trim()));
+      if (!firstDataRow) return [];
+      const headers = firstDataRow.map((v, i) => String(v || "").trim() || `列${i + 1}`);
+      const startIndex = matrix.indexOf(firstDataRow) + 1;
+      return matrix.slice(startIndex)
+        .filter((row) => Array.isArray(row) && row.some((v) => String(v || "").trim()))
+        .map((row) => Object.fromEntries(headers.map((h, i) => [h, row[i] ?? ""])));
+    };
+
+    const parseFile = async (file) => {
+      const ext = (file.name.split(".").pop() || "").toLowerCase();
+
+      // 1) 优先 arrayBuffer；2) 失败后尝试 binary string；3) CSV 文本兜底
+      const buffer = await file.arrayBuffer();
+      let wb = tryReadWorkbook(buffer, { type: "array", cellDates: true, raw: false });
+
+      if (!wb) {
+        const binary = Array.from(new Uint8Array(buffer), (b) => String.fromCharCode(b)).join("");
+        wb = tryReadWorkbook(binary, { type: "binary", cellDates: true, raw: false });
       }
-    };
 
-    const setupContract = async () => {
-      const eth = ensureProvider();
-      if (!eth) return;
-      if (!(await ensureNetwork(eth))) return;
-
-      provider = new ethers.BrowserProvider(eth);
-      signer = await provider.getSigner();
-      contract = new ethers.Contract(contractAddress, abi, signer);
-
-      const addr = await signer.getAddress();
-      const net = await provider.getNetwork();
-      $("account").innerText = addr;
-      $("network").innerText = net.name || net.chainId;
-      setStatus("已连接");
-      setMsg("钱包已连接，可进行操作。");
-      setError("");
-
-      $("inc").disabled = false;
-      $("set").disabled = false;
-
-      startPolling();
-    };
-
-    const startPolling = () => {
-      clearInterval(pollTimer);
-      pollTimer = setInterval(async () => {
-        if (!contract) return;
-        try {
-          $("value").innerText = (await contract.count()).toString();
-        } catch (err) {
-          setError("读取合约失败，请检查网络/权限。");
-        }
-      }, 2000);
-    };
-
-    $("connect").onclick = async () => {
-      try {
-        const eth = ensureProvider();
-        if (!eth) return;
-        await eth.request({ method: "eth_requestAccounts" });
-        await setupContract();
-      } catch (err) {
-        console.error(err);
-        setError("连接失败：" + (err?.message || "未知错误"));
+      if (!wb && (ext === "csv" || ext === "et")) {
+        const text = await file.text();
+        wb = tryReadWorkbook(text, { type: "string", raw: false, codepage: 65001 });
       }
-    };
 
-    $("inc").onclick = async () => {
-      if (!contract) return setError("请先连接钱包");
-      try {
-        setMsg("发送交易中...");
-        const tx = await contract.increment();
-        await tx.wait();
-        setMsg("交易完成，计数已更新");
-      } catch (err) {
-        console.error(err);
-        setError("交易失败：" + (err?.message || "未知错误"));
+      if (!wb || !wb.SheetNames?.length) {
+        throw new Error("无法识别文件结构，请确认文件未加密且为有效的 xlsx/xls/csv/et。");
       }
+
+      const firstSheetName = wb.SheetNames[0];
+      const rows = toObjectsFromSheet(wb.Sheets[firstSheetName]);
+      return rows;
     };
 
-    $("set").onclick = async () => {
-      if (!contract) return setError("请先连接钱包");
-      try {
-        setMsg("发送交易中...");
-        const tx = await contract.set(10);
-        await tx.wait();
-        setMsg("交易完成，已设置为 10");
-      } catch (err) {
-        console.error(err);
-        setError("交易失败：" + (err?.message || "未知错误"));
+    const normalize = (value) => String(value || "").trim();
+
+    const bestOrderField = (headers) => {
+      const lowerHeaders = headers.map((h) => h.toLowerCase());
+      for (const hint of orderFieldHints) {
+        const idx = lowerHeaders.findIndex((h) => h.includes(hint.toLowerCase()));
+        if (idx >= 0) return headers[idx];
       }
+      return headers[0] || "";
     };
 
-    // 账户或网络切换时同步 UI
-    const eth = getInjectedProvider();
-    if (eth) {
-      eth.on?.("accountsChanged", () => {
-        setStatus("账号变更，需重新连接");
-        $("inc").disabled = true;
-        $("set").disabled = true;
-        contract = null;
-        clearInterval(pollTimer);
+    const fillSelect = (selectId, rows) => {
+      const select = $(selectId);
+      select.innerHTML = "";
+      const headers = rows.length ? Object.keys(rows[0]) : [];
+      headers.forEach((h) => {
+        const option = document.createElement("option");
+        option.value = h;
+        option.textContent = h;
+        select.appendChild(option);
       });
-      eth.on?.("chainChanged", () => {
-        setStatus("网络变更，需重新连接");
-        $("inc").disabled = true;
-        $("set").disabled = true;
-        contract = null;
-        clearInterval(pollTimer);
-      });
-    }
+      const guess = bestOrderField(headers);
+      if (guess) select.value = guess;
+    };
+
+    const handleFileChange = async (inputId, infoId, key, selectId) => {
+      const file = $(inputId).files[0];
+      if (!file) return;
+      try {
+        const rows = await parseFile(file);
+        state[key] = rows;
+        $(infoId).textContent = `已读取 ${rows.length} 行，文件：${file.name}`;
+        fillSelect(selectId, rows);
+        setStatus("文件读取成功，可开始对比。", false);
+      } catch (err) {
+        console.error(err);
+        setStatus(`读取失败：${file.name}。请确认文件未加密、未损坏，且为 WPS 导出的 xlsx/xls/csv/et。`, true);
+      }
+    };
+
+    const extractSet = (rows, column) => {
+      const values = rows.map((r) => normalize(r[column])).filter(Boolean);
+      return new Set(values);
+    };
+
+    const compare = () => {
+      if (!state.officialRows.length || !state.clientRows.length) {
+        setStatus("请先上传两份月订单表。", true);
+        return;
+      }
+      const officialColumn = $("officialColumn").value;
+      const clientColumn = $("clientColumn").value;
+      if (!officialColumn || !clientColumn) {
+        setStatus("请先选择订单号字段。", true);
+        return;
+      }
+
+      const officialSet = extractSet(state.officialRows, officialColumn);
+      const clientSet = extractSet(state.clientRows, clientColumn);
+
+      const duplicates = [...officialSet].filter((id) => clientSet.has(id)).sort();
+      const missing = [...officialSet].filter((id) => !clientSet.has(id)).sort();
+      const extras = [...clientSet].filter((id) => !officialSet.has(id)).sort();
+
+      state.resultRows = [
+        ...duplicates.map((v) => ({ type: "两边重复", orderNo: v })),
+        ...missing.map((v) => ({ type: "官方有/客户漏掉", orderNo: v })),
+        ...extras.map((v) => ({ type: "客户有/官方没有", orderNo: v }))
+      ];
+
+      $("officialCount").textContent = officialSet.size;
+      $("clientCount").textContent = clientSet.size;
+      $("dupCount").textContent = duplicates.length;
+      $("missingInClient").textContent = missing.length;
+      $("extraInClient").textContent = extras.length;
+
+      renderRows(state.resultRows);
+      $("exportBtn").disabled = state.resultRows.length === 0;
+      setStatus("对比完成。", false);
+    };
+
+    const renderRows = (rows) => {
+      const tbody = $("resultBody");
+      tbody.innerHTML = "";
+      if (!rows.length) {
+        tbody.innerHTML = "<tr><td colspan='2'>没有差异</td></tr>";
+        return;
+      }
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.type}</td><td>${row.orderNo}</td>`;
+        tbody.appendChild(tr);
+      }
+    };
+
+    const exportCsv = () => {
+      const header = ["类型", "订单号"];
+      const lines = [header.join(","), ...state.resultRows.map((r) => `${r.type},${r.orderNo}`)];
+      const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `订单对比结果_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    $("officialFile").addEventListener("change", () =>
+      handleFileChange("officialFile", "officialInfo", "officialRows", "officialColumn")
+    );
+    $("clientFile").addEventListener("change", () =>
+      handleFileChange("clientFile", "clientInfo", "clientRows", "clientColumn")
+    );
+    $("compareBtn").addEventListener("click", compare);
+    $("exportBtn").addEventListener("click", exportCsv);
   </script>
 </body>
 </html>
